@@ -2,16 +2,14 @@ package render
 
 import (
 	"bytes"
+	"html/template"
 	"log"
 	"net/http"
 	"path/filepath"
-	"text/template"
 
 	"github.com/mycreativelife/bookings/pkg/config"
 	"github.com/mycreativelife/bookings/pkg/models"
 )
-
-
 
 var app *config.AppConfig
 
@@ -27,12 +25,11 @@ func AddDefaultData(td *models.TemplateData) *models.TemplateData {
 func RenderTemplate(w http.ResponseWriter, tmpl string, td *models.TemplateData) {
 	var tc map[string]*template.Template
 	if app.UseCache {
-			// get the template cache from the app config
+			// create a template cache
 			tc = app.TemplateCache
 	} else {
 		tc, _ = CreateTemplateCache()
 	}
-
 
 	// get requested template from cache
 	t, ok := tc[tmpl]
@@ -42,11 +39,12 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, td *models.TemplateData)
 	buf := new(bytes.Buffer)
 
 	td = AddDefaultData(td)
-
+	
 	err := t.Execute(buf, td)
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
+
 	// render the template
 	_, err = buf.WriteTo(w)
 	if err != nil {
@@ -57,11 +55,12 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, td *models.TemplateData)
 func CreateTemplateCache() (map[string]*template.Template, error) {
 	myCache := map[string]*template.Template{}
 
-	// get all the files named *.page.tmpl from ./templates
+	// get all of the files named *.page.tmpl from ./templates
 	pages, err := filepath.Glob("./templates/*.page.tmpl")
 	if err != nil {
 		return myCache, err
 	}
+
 	// range through all files ending with *.page.tmpl
 	for _, page := range pages {
 		name := filepath.Base(page)
@@ -74,13 +73,13 @@ func CreateTemplateCache() (map[string]*template.Template, error) {
 			return myCache, err
 		}
 		if len(matches) > 0 {
-			ts, err = ts.ParseGlob("./templates/*layout.tmpl")
+			ts, err = ts.ParseGlob("./templates/*.layout.tmpl")
 			if err != nil {
 				return myCache, err
 			}
 		}
-
 		myCache[name] = ts
 	}
-	return myCache, nil
+
+	return myCache, err
 }
